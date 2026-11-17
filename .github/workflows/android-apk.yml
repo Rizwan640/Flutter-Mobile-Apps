@@ -37,6 +37,9 @@ jobs:
       - name: Show Flutter version
         run: flutter --version
 
+      - name: Generate Android and iOS platform folders
+        run: flutter create --platforms=android,ios --project-name flutter_mobile_apps .
+
       - name: Install dependencies
         run: flutter pub get
 
