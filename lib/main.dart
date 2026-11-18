@@ -202,9 +202,10 @@ class _AurixHomePageState extends State<AurixHomePage> {
       _error = null;
     });
 
-    final history = _messages.length > 9
-        ? _messages.sublist(_messages.length - 9, _messages.length - 1)
-        : _messages.sublist(0, _messages.length - 1);
+    final previousMessages = _messages.sublist(0, _messages.length - 2);
+    final history = previousMessages.length > 8
+        ? previousMessages.sublist(previousMessages.length - 8)
+        : previousMessages;
     final chat = <ChatMessage>[
       ChatMessage(
         role: 'system',
