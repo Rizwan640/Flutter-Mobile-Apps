@@ -54,7 +54,10 @@ class _AurixHomePageState extends State<AurixHomePage> {
   bool _busy = false;
   bool _generating = false;
   double _downloadProgress = 0;
+  double _modelLoadProgress = 0;
   String _status = 'MODEL NOT DOWNLOADED';
+  int? _availableRamMb;
+  StreamSubscription<double>? _modelLoadSubscription;
   String? _error;
   StreamSubscription<String>? _generationSubscription;
 
@@ -158,17 +161,35 @@ class _AurixHomePageState extends State<AurixHomePage> {
     setState(() {
       _busy = true;
       _error = null;
-      _status = 'LOADING LOCAL AI';
+      _status = 'CHECKING MEMORY • PREPARING LOCAL AI';
+      _modelLoadProgress = 0;
     });
     try {
       final file = knownPath == null ? await _modelFile() : File(knownPath);
       if (!await file.exists()) {
         throw StateError('Model file not found. Download it first.');
       }
+      // Check available system memory before entering native llama.cpp code.
+      // A low-memory native allocation can terminate Android without a Dart exception.
+      final gpuInfo = await _llama.detectGpu();
+      final freeRamMb = gpuInfo.freeRamBytes ~/ (1024 * 1024);
+      if (mounted) setState(() => _availableRamMb = freeRamMb);
+      if (freeRamMb < 800) {
+        throw StateError(
+          'Only $freeRamMb MB RAM is currently free. Close other apps, restart the phone, and try again when at least 800 MB is free.',
+        );
+      }
+
+      // Keep the first load conservative for a 4 GB phone.
+      _modelLoadSubscription?.cancel();
+      _modelLoadSubscription = _llama.loadProgress.listen((progress) {
+        if (!mounted) return;
+        setState(() => _modelLoadProgress = progress.clamp(0.0, 1.0));
+      });
       await _llama.loadModel(
         modelPath: file.path,
-        threads: 4,
-        contextSize: 1024,
+        threads: 2,
+        contextSize: 512,
         gpuLayers: 0,
       );
       if (!mounted) return;
@@ -259,6 +280,7 @@ class _AurixHomePageState extends State<AurixHomePage> {
   @override
   void dispose() {
     _generationSubscription?.cancel();
+    _modelLoadSubscription?.cancel();
     _llama.dispose();
     _promptController.dispose();
     super.dispose();
@@ -327,11 +349,20 @@ class _AurixHomePageState extends State<AurixHomePage> {
                       'Qwen2.5 0.5B Instruct • GGUF Q3_K_M\nApprox. 432 MB • Stored on this phone',
                       style: TextStyle(height: 1.5, fontSize: 12, color: Color(0xFF9A9EA6)),
                     ),
-                    if (_busy && _downloadProgress > 0) ...[
+                    if (_busy && _downloadProgress > 0 && !_modelPresent) ...[
                       const SizedBox(height: 14),
                       LinearProgressIndicator(value: _downloadProgress, minHeight: 5, borderRadius: BorderRadius.circular(8)),
                       const SizedBox(height: 7),
                       Text('${(_downloadProgress * 100).toStringAsFixed(1)}% downloaded', style: const TextStyle(fontSize: 11, color: Color(0xFFB9BEC7))),
+                    ],
+                    if (_busy && _modelPresent && _status.contains('LOCAL AI')) ...[
+                      const SizedBox(height: 14),
+                      LinearProgressIndicator(value: _modelLoadProgress > 0 ? _modelLoadProgress : null, minHeight: 5, borderRadius: BorderRadius.circular(8)),
+                      const SizedBox(height: 7),
+                      Text(
+                        _availableRamMb == null ? 'Checking available memory...' : 'Free RAM: $_availableRamMb MB • Loading with low-memory settings',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFFB9BEC7)),
+                      ),
                     ],
                     const SizedBox(height: 15),
                     SizedBox(
