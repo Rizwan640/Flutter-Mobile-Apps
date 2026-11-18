@@ -36,10 +36,12 @@ class AurixHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
@@ -95,7 +97,7 @@ class AurixHomePage extends StatelessWidget {
                   ),
                 ],
               ),
-              const Spacer(),
+              const SizedBox(height: 34),
               const Center(child: _AurixOrb()),
               const SizedBox(height: 38),
               const Center(
@@ -208,7 +210,7 @@ class AurixHomePage extends StatelessWidget {
                   ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 28),
               const Center(
                 child: Text(
                   'PRIVATE BY DESIGN  •  RUNS ON YOUR DEVICE',
@@ -219,7 +221,8 @@ class AurixHomePage extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
